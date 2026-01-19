@@ -1,54 +1,86 @@
-# GitHub Action
+# Build Classic ASP Release Action
 
-Description of what the GitHub Action does.
+This GitHub Action packages a Classic ASP project into a zip file and creates a GitHub release with semantic versioning and automated release notes. It automates the packaging and release process for Classic ASP applications, with support for both standard and pre-release versioning.
+
+---
 
 ## Features
-- Feature #1
-- Feature #2
-- Feature #3
+- Packages the entire content of a specified Classic ASP project folder into a versioned zip file.
+- Automatically generates a semantic version tag (with pre-release support and suffix).
+- Publishes a GitHub Release and attaches the zip file (for standard releases).
+- Adds a step summary with release details.
+- Posts status comments on related pull requests.
+- Outputs the outcome of the release (Release Created, No Release, or Release Failed).
+- Timestamps the release in Central Daylight Time (CDT).
+
+---
 
 ## Inputs
-| Name          | Description                                           | Required | Default |
-|---------------|-------------------------------------------------------|----------|---------|
-| `input-1`     | Description of input-1.                               | Yes      | N/A     |
-| `input-2`     | Description of input-2.                               | Yes      | N/A     |
-| `input-3`     | Description of input-3.                               | Yes      | N/A    |
+
+| Name                | Description                                                                                  | Required |
+|---------------------|----------------------------------------------------------------------------------------------|----------|
+| `project-folder-path` | The path to the Classic ASP project folder to be packaged.                                 | Yes      |
+| `prerelease`        | Mark the release as a pre-release (`true`/`false`).                                          | Yes      |
+| `prerelease-suffix` | The suffix to append to the version number for pre-releases. For non-pre-releases, the version is based on the latest pre-release with this suffix. | Yes      |
+| `package-name`      | The base name for the zip file containing the build artifacts.                               | Yes      |
+| `token`             | The GitHub token used for authentication to create the release.                              | Yes      |
+
+---
 
 ## Outputs
-| Name           | Description                                                   |
-|----------------|---------------------------------------------------------------|
-| `result`       | Result of the action ("success" or "failure").                |
-| `error-message`| Error message if the action fails.                            |
+
+| Name              | Description                                                                                                   |
+|-------------------|--------------------------------------------------------------------------------------------------------------|
+| `version-tag`     | The new tag created for the release (e.g., `v1.0.0`).                                                        |
+| `version-number`  | The new tag with the "v" prefix removed (e.g., `1.0.0`).                                                     |
+| `zip-file-name`   | The name of the zip file containing the build artifacts (e.g., `my-package.1.0.0.zip`).                      |
+| `zip-file-path`   | The full path to the zip file containing the build artifacts.                                                |
+| `build-status`    | The build/release outcome—one of: Release Created, No Release, or Release Failed.                            |
+
+---
 
 ## Usage
-1. **Add the Action to Your Workflow**:
-   Create or update a workflow file (e.g., `.github/workflows/your-action.yml`) in your repository.
 
-2. **Reference the Action**:
-   Use the action by referencing the repository and version (e.g., `v1`).
+**Important:**  
+- This action uses PowerShell for archiving and can be run on both Windows and Ubuntu (but requires PowerShell 7+ on Ubuntu runners).
+- Designed to be used as part of your pull request or main branch release flow.
 
-3. **Example Workflow**:
-   ```yaml
-   name: Your Action
-   on:
-     issues:
-       types: [labeled]
-   jobs:
-     open-issue:
-       runs-on: ubuntu-latest
-       steps:
-         - name: Run Action
-           id: open
-           uses: lee-lott-actions/your-action@v1
-           with:
-             input-1: '1'
-             input-2: '2'
-             input-3: '3'
-         - name: Print Result
-           run: |
-             if [[ "${{ steps.open.outputs.result }}" == "success" ]]; then
-               echo "Issue #${{ github.event.issue.number }} successfully opened."
-             else
-               echo "Error: ${{ steps.open.outputs.error-message }}"
-               exit 1
-             fi
+### Example Workflow
+
+```yaml
+name: Build and Release Classic ASP Project
+
+on:
+  pull_request:
+    types: [closed]
+
+jobs:
+  build-and-release:
+    if: github.event.pull_request.merged == true
+    name: Create Release
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Package Classic ASP Project and Create Release
+        uses: lee-lott-actions/build-classic-asp-release@v1
+        with:
+          project-folder-path: 'src/ClassicASP'
+          prerelease: 'false'
+          prerelease-suffix: 'beta'
+          package-name: 'my-asp-package'
+          token: ${{ secrets.GITHUB_TOKEN }}
+```
+
+---
+
+## Notes
+
+- Tag and release creation use [semantic versioning](https://semver.org/).
+- For pre-releases, the action creates an annotated tag but does not publish a GitHub Release.
+- For standard releases, a zip file will be created and attached to a GitHub Release.
+- A release summary, including release URL and zip file name, is added to the workflow run summary.
+- The release timestamp reflects Central Daylight Time (CDT).
+
+---
